@@ -9,9 +9,14 @@ import aqp from 'api-query-params';
 import { CreateAuthDto } from 'src/auth/dto/create-auth.dto';
 import { v4 as uuidv4 } from 'uuid';
 import dayjs from 'dayjs';
+import { MailerService } from '@nestjs-modules/mailer';
 @Injectable()
 export class UsersService {
-  constructor(@InjectModel(User.name) private userModel: Model<User>) { };
+  constructor(@
+    InjectModel(User.name) private userModel: Model<User>,
+    private readonly mailerService: MailerService
+
+  ) { };
 
   isExistingEmail = async (email: string) => {
     const user = await this.userModel.exists({ email });
@@ -77,6 +82,7 @@ export class UsersService {
   }
   async handleRegister(createAuthDto: CreateAuthDto) {
     const { name, username, password } = createAuthDto;
+    const codeId = uuidv4();
     //check email
     const existsEmail = await this.isExistingEmail(username);
     if (existsEmail) {
@@ -87,9 +93,20 @@ export class UsersService {
     const user = await this.userModel.create({
       name, username, password: hashPassword,
       isActive: false,
-      codeId: uuidv4(),
-      codeExpired: dayjs().add(1, 'minutes'),
+      codeId: codeId,
+      codeExpired: dayjs().add(30, 'minutes'),
     });
+
+    this.mailerService.sendMail({
+      to: username, // list of receivers
+      from: 'noreply@nestjs.com', // sender address
+      subject: 'Activate your account ✔', // Subject line
+      template: "register",
+      context: {
+        name: user?.name ?? user?.email,
+        activationCode: codeId
+      }
+    })
     return {
       _id: user._id
     };

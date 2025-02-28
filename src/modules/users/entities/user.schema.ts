@@ -24,7 +24,7 @@ export class User {
     image: string;
 
     @Prop({ default: "USER" })
-    role: string;
+    role: "USER" | "ADMIN";
 
     @Prop({ default: "LOCAL" })
     accountType: string;
